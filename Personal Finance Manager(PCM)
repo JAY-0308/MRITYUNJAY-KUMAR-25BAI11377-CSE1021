@@ -1,0 +1,265 @@
+# Personal Finance Manager (PFM) - A simple command-line app to track income, expenses, and budgets.
+#importing math module for statistical calculations
+import math  # used for standard deviation etc.
+
+# arrays will store data about transactions and budgets.
+txns = []                
+budgets_dict = {}         
+
+
+def record_income():
+    """Prompt user and append an income transaction.
+    I used some redundant variables because I do that in my scripts sometimes.
+    """
+    
+    raw = input("Amount (₹): ")
+    
+    raw = raw.strip()
+    
+    try:
+        amt = float(raw)
+    except Exception:
+        print("That's not a number — income not recorded. Try again.")
+        return
+
+    
+    cat = input("Category: ").strip()
+
+    entry = {'amount': amt, 'category': cat, 'type': 'income'}
+    txns.append(entry)
+
+   
+    added = amt
+    print(f"₹{added} income recorded under '{cat}'.\n")
+
+
+def record_expense():
+    """Append an expense and warn when budget exceeded for that category.
+    I deliberately calculate spent using a small loop instead of sum() to look "manual".
+    """
+    raw = input("Amount (₹): ")
+    raw = raw.strip()
+    try:
+        amt = float(raw)
+    except Exception:
+        print("Bad amount — expense not added.")
+        return
+
+    cat = input("Category: ").strip()
+
+    txns.append({'amount': amt, 'category': cat, 'type': 'expense'})
+
+    # check budgets:
+    if cat in budgets_dict:
+        spent = 0.0
+       
+        for t in txns:
+            if t['type'] == 'expense' and t['category'] == cat:
+                spent += t['amount']
+
+        limit = budgets_dict[cat]
+        
+        if spent > limit:
+            print(f"WARNING: Over budget for {cat}! Spent ₹{spent:.2f} / ₹{limit:.2f}")
+
+    print(f"₹{amt} expense recorded under '{cat}'.\n")
+
+
+def set_category_budget():
+    """Set (or update) budget for a category."""
+    cat = input("Budget category: ").strip()
+    raw = input("Budget limit (₹): ").strip()
+    try:
+        limit = float(raw)
+    except Exception:
+        print("Invalid budget amount — not set.")
+        return
+
+    budgets_dict[cat] = limit
+    
+    print(f"Budget for '{cat}' set to ₹{limit:.2f}\n")
+
+
+def print_summary():
+    #Show totals and breakdown by category.
+
+    
+    print('\n' + '-'*50)
+    print('ACCOUNT SUMMARY')
+    print('-'*50)
+
+    total_income = 0.0
+    total_expense = 0.0
+
+    
+    for t in txns:
+        if t['type'] == 'income':
+            total_income += t['amount']
+        else:
+            total_expense += t['amount']
+
+    
+    balance = total_income - total_expense
+
+    print(f"Total Income:   ₹{total_income:.2f}")
+    print(f"Total Expense:  ₹{total_expense:.2f}")
+    print(f"Balance:        ₹{balance:.2f}")
+
+    # expenses by category
+    print('\n' + '-'*50)
+    print('EXPENSES BY CATEGORY')
+    print('-'*50)
+
+    cat_sums = {}
+    for t in txns:
+        if t['type'] != 'expense':
+            continue
+        c = t['category']
+        if c in cat_sums:
+            cat_sums[c] += t['amount']
+        else:
+            cat_sums[c] = t['amount']
+
+    # show all categories with budgets
+    for c, amt in cat_sums.items():
+        bud_text = ''
+        if c in budgets_dict:
+            
+            bud_text = ' / ₹' + str(budgets_dict[c])
+        print(f"{c}: ₹{amt:.2f}{bud_text}")
+
+    print('-'*50 + '\n')
+
+
+def print_stats():
+    #Compute and print some basic statistics for incomes & expenses.
+    if not txns:
+        print('No transactions yet — nothing to show.\n')
+        return
+
+    print('\n' + '='*50)
+    print('STATISTICS')
+    print('-'*50)
+
+    # collect expense amounts
+    expenses = [t['amount'] for t in txns if t['type'] == 'expense']
+
+    if expenses:
+        # average calculation
+        total = 0.0
+        for e in expenses:
+            total += e
+        avg = total / len(expenses)
+
+        # variance: manual loop 
+        var = 0.0
+        for e in expenses:
+            var += (e - avg) ** 2
+        var = var / len(expenses)
+        stddev = math.sqrt(var)
+
+        # find min and max 
+        min_e = expenses[0]
+        max_e = expenses[0]
+        for e in expenses:
+            if e < min_e:
+                min_e = e
+            if e > max_e:
+                max_e = e
+
+        print(f"Expense Count:    {len(expenses)}")
+        print(f"Average Expense:  ₹{avg:.2f}")
+        print(f"Std Dev (exp):    ₹{stddev:.2f}")
+        print(f"Min Expense:      ₹{min_e:.2f}")
+        print(f"Max Expense:      ₹{max_e:.2f}")
+
+    # incomes stats (kept simple)
+    incomes = [t['amount'] for t in txns if t['type'] == 'income']
+    if incomes:
+        inc_total = 0.0
+        
+        for i in incomes:
+            inc_total += i
+        inc_avg = inc_total / len(incomes)
+        print('\n' + f"Income Count:     {len(incomes)}")
+        print(f"Average Income:   ₹{inc_avg:.2f}")
+
+    print('-'*50 + '\n')
+
+
+def show_transactions():
+    #Print recent transactions
+    
+    print('\n' + '-'*50)
+    print('RECENT TRANSACTIONS')
+    print('-'*50 + '\n')
+
+    if not txns:
+        print('No transactions yet!')
+    else:
+        # show last 10 transactions
+        start = max(0, len(txns) - 10)
+        for i in range(start, len(txns)):
+            t = txns[i]
+            sign = '+' if t['type'] == 'income' else '-'
+            
+            print(f"{sign}₹{t['amount']:.2f}  —  {t['category']}")
+
+    print('\n' + '-'*50 + '\n')
+
+
+def show_menu():
+    #Display the menu.
+    print('-'*50)
+    print('PERSONAL FINANCE MANAGER (PFM)')
+    print('-'*50)
+    print('1) Add Income')
+    print('2) Add Expense')
+    print('3) Set Budget')
+    print('4) View Summary')
+    print('5) View Statistics')
+    print('6) View Transactions')
+    print('7) Exit')
+    print('-'*50)
+
+
+def run_app():
+    
+    print('\nWelcome to the (slightly humanized) Finance Manager!\n')
+
+    while True:
+        show_menu()
+        choice = input('\nChoice (1-7): ').strip()
+
+        # run selected option
+        try:
+            if choice == '1':
+                record_income()
+            elif choice == '2':
+                record_expense()
+            elif choice == '3':
+                set_category_budget()
+            elif choice == '4':
+                print_summary()
+            elif choice == '5':
+                print_stats()
+            elif choice == '6':
+                show_transactions()
+            elif choice == '7':
+                print('\nThanks for using this small PFM app — bye!\n')
+                break
+            else:
+                
+                print('Invalid choice — please pick a number 1-7.')
+                # Invlaid input.
+        except ValueError:
+            print('Invalid input — expected a number-ish value.')
+        except Exception as e:
+            
+            print('An error occurred:', e)
+
+
+if __name__ == '__main__':
+    run_app()
+
+# End of file
